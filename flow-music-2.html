@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#000;}#player{width:100%;}</style>
+</head>
+<body>
+<div id="player"></div>
+<script src="https://ssl.p.jwpcdn.com/player/v/8.26.0/jwplayer.js"></script>
+<script>
+jwplayer.key = "XSuP4qMl+9tK17QNb+4+th2Pm9AWgMO/cYH8CI0HGGr7bdjo";
+var hosts = ["cdn","chromecast"];
+var host = hosts[Math.floor(Math.random()*hosts.length)];
+var canal = "Flow_Music_2";
+var url = "https://"+host+".cvattv.com.ar/live/c7eds/"+canal+"/SA_Live_dash_enc_C/"+canal+".mpd";
+jwplayer("player").setup({
+  playlist:[{sources:[{file:url,type:"dash",drm:{clearkey:{keyId:"596b599580b39ae2f3c413f7eae36902",key:"2d7e3d5d31f68690fd877a111f84e8e3"}}}]}],
+  autostart:true,mute:false,volume:100,width:"100%",aspectratio:"16:9",stretching:"exactfit",preload:"auto"
+});
+jwplayer("player").on("error",function(){
+  var alt=host==="cdn"?"chromecast":"cdn";
+  var altUrl="https://"+alt+".cvattv.com.ar/live/c7eds/"+canal+"/SA_Live_dash_enc_C/"+canal+".mpd";
+  try{jwplayer("player").load([{sources:[{file:altUrl,type:"dash",drm:{clearkey:{keyId:"596b599580b39ae2f3c413f7eae36902",key:"2d7e3d5d31f68690fd877a111f84e8e3"}}}]}]);jwplayer("player").play();}catch(e){}
+});
+</script>
+</body>
+</html>
