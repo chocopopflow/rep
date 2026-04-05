@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="referrer" content="no-referrer">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:#000;}
+#player{width:100%;aspect-ratio:16/9;}
+</style>
+</head>
+<body>
+<div id="player"></div>
+<script src="https://ssl.p.jwpcdn.com/player/v/8.26.0/jwplayer.js"></script>
+<script>
+jwplayer.key = "XSuP4qMl+9tK17QNb+4+th2Pm9AWgMO/cYH8CI0HGGr7bdjo";
+
+var TOKENS = [
+  { cdn:"edge-live01-sl", token:"tok_eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOiIxNzc1NDk2NzYxIiwic2lwIjoiODQuMjUyLjExNC44IiwicGF0aCI6Ii9saXZlL2M2ZWRzL1RlbGVmZUhEL1NBX0xpdmVfZGFzaF9lbmNfQy8iLCJzZXNzaW9uX2Nkbl9pZCI6IjNhM2I3NTU1NWUxOGIyZmUiLCJzZXNzaW9uX2lkIjoiIiwiY2xpZW50X2lkIjoiIiwiZGV2aWNlX2lkIjoiIiwibWF4X3Nlc3Npb25zIjowLCJzZXNzaW9uX2R1cmF0aW9uIjowLCJ1cmwiOiJodHRwczovLzIwMS4yMzUuNjYuMTE0IiwiYXVkIjoiMjQ1Iiwic291cmNlcyI6Wzg1LDE0NCw4Niw4OF19.TF7TdiT5wZGQZbiiFKriSuvDSvp5dZUL7BSwbLbMJUdHShS_zFKBvXf0bHwIQydUe-ClDH0vwXAX8to-gsJSqw==" },
+  { cdn:"edge-live09-hr", token:"tok_eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOiIxNzc1NDk2ODY1Iiwic2lwIjoiODQuMjUyLjExNC44IiwicGF0aCI6Ii9saXZlL2MzZWRzL0NhbmFsOS9TQV9MaXZlX2Rhc2hfZW5jX0MvIiwic2Vzc2lvbl9jZG5faWQiOiI5N2VlYWUxYTU3MTEyMDhmIiwic2Vzc2lvbl9pZCI6IiIsImNsaWVudF9pZCI6IiIsImRldmljZV9pZCI6IiIsIm1heF9zZXNzaW9ucyI6MCwic2Vzc2lvbl9kdXJhdGlvbiI6MCwidXJsIjoiaHR0cHM6Ly8yMDEuMjM1LjY2LjExNCIsImF1ZCI6IjMxNCIsInNvdXJjZXMiOls4NSwxNDQsODYsODhdfQ==.5tzO7TcohjNelsVcNhLq5GhyyJSIDWGi0nnyNraRPRfhk23O3y7mI537cVD4SD4OfHSea7k2Y16J2UZJfIlnZA==" },
+  { cdn:"edge-live13-hr", token:"tok_eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOiIxNzc1NDk3OTYwIiwic2lwIjoiODQuMjUyLjExNC44IiwicGF0aCI6Ii9saXZlL2MzZWRzL0VTUE4ySEQvU0FfTGl2ZV9kYXNoX2VuY19DLyIsInNlc3Npb25fY2RuX2lkIjoiNjMwYzhlMTk4ZDgwNGQwMSIsInNlc3Npb25faWQiOiIiLCJjbGllbnRfaWQiOiIiLCJkZXZpY2VfaWQiOiIiLCJtYXhfc2Vzc2lvbnMiOjAsInNlc3Npb25fZHVyYXRpb24iOjAsInVybCI6Imh0dHBzOi8vMjAxLjIzNS42Ni4xMTUiLCJhdWQiOiI2NiIsInNvdXJjZXMiOls4NSwxNDQsODYsODhdfQ==.LIsMTVzi8kk_pr4ynNlBl9ajwIVRUJ3XMsXZPAJIUgpqe3fyKYenwGkjIqDpDnIHdmkMGlWYTVQDayyufnuYFA==" },
+  { cdn:"edge-vod06-sl",  token:"tok_eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOiIxNzc1NDk3ODQ0Iiwic2lwIjoiODQuMjUyLjExNC44IiwicGF0aCI6Ii9saXZlL2M3ZWRzL0ZveF9TcG9ydHNfUHJlbWl1bl9IRC9TQV9MaXZlX2Rhc2hfZW5jX0MvIiwic2Vzc2lvbl9jZG5faWQiOiI5NTMzMzJhODA0ZTI2MzJkIiwic2Vzc2lvbl9pZCI6IiIsImNsaWVudF9pZCI6IiIsImRldmljZV9pZCI6IiIsIm1heF9zZXNzaW9ucyI6MCwic2Vzc2lvbl9kdXJhdGlvbiI6MCwidXJsIjoiaHR0cHM6Ly8yMDEuMjM1LjY2LjExNSIsImF1ZCI6IjEzOSIsInNvdXJjZXMiOls4NSwxNDQsODYsODhdfQ==.ABbTJoAPvcHAqeNPRRp4FQB35ro_n5P0r6St_ej1ENXBrwkcORCO5TDM11RkUtaeylQClDIOHMFSI3rZl0Dq4A==" },
+  { cdn:"edge5-hr",       token:"tok_eyJhbGciOiJIUzUxMiIsInR5cCI6IkpXVCJ9.eyJleHAiOiIxNzc1NDk4MTQyIiwic2lwIjoiODQuMjUyLjExNC44IiwicGF0aCI6Ii9saXZlL2M0ZWRzL0hCT0hEL1NBX0xpdmVfZGFzaF9lbmNfQy8iLCJzZXNzaW9uX2Nkbl9pZCI6ImI1MzRiMGZmZWVhZjlmODQiLCJzZXNzaW9uX2lkIjoiIiwiY2xpZW50X2lkIjoiIiwiZGV2aWNlX2lkIjoiIiwibWF4X3Nlc3Npb25zIjowLCJzZXNzaW9uX2R1cmF0aW9uIjowLCJ1cmwiOiJodHRwczovLzIwMS4yMzUuNjYuMTIzIiwiYXVkIjoiMjIwIiwic291cmNlcyI6Wzg1LDE0NCw4Niw4OF19.l1STPIz9ztD6HiL5dWw0LN1NzmYJ4jTi7aXrllqM6UOLp8OcuXOVSxOLpzf5BBubotHR7nR4VpRIRwxYRpQK3g==" },
+];
+
+var canal = "Flow_Music_XP";
+var keyId = "b2aae44a74144be8b2118e20d1412bab";
+var key   = "8a7ae996d12d8d5d5637d1044f8e08b7";
+var n = 7;
+
+function rndToken(){ return TOKENS[Math.floor(Math.random()*TOKENS.length)]; }
+
+function play(t){
+  var url = "https://"+t.cdn+".cvattv.com.ar/"+t.token+"/live/c"+n+"eds/"+canal+"/SA_Live_dash_enc/"+canal+".mpd";
+  jwplayer("player").setup({
+    playlist:[{sources:[{file:url,type:"dash",drm:{clearkey:{keyId:keyId,key:key}}}]}],
+    autostart:true, mute:false, volume:100,
+    width:"100%", aspectratio:"16:9", stretching:"exactfit", preload:"auto"
+  });
+  jwplayer("player").on("error", function(){
+    var alt = rndToken();
+    var altUrl = "https://"+alt.cdn+".cvattv.com.ar/"+alt.token+"/live/c"+n+"eds/"+canal+"/SA_Live_dash_enc/"+canal+".mpd";
+    try{ jwplayer("player").load([{sources:[{file:altUrl,type:"dash",drm:{clearkey:{keyId:keyId,key:key}}}]}]); jwplayer("player").play(); }catch(e){}
+  });
+}
+
+play(rndToken());
+</script>
+</body>
+</html>
