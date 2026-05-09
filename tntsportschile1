@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Player</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.7/hls.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0a0a0a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      font-family: 'Courier New', monospace;
+    }
+
+    .player-wrap {
+      width: 100%;
+      max-width: 860px;
+      background: #111;
+      border: 1px solid #222;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(0,0,0,0.8);
+    }
+
+    .video-container {
+      position: relative;
+      background: #000;
+      width: 100%;
+      aspect-ratio: 16/9;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      display: block;
+      background: #000;
+    }
+
+    /* Overlay for click to play/pause */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    /* Big play icon in center */
+    .big-play {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 3;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 0.3s;
+    }
+    .big-play.hidden { opacity: 0; }
+    .big-play svg {
+      width: 64px;
+      height: 64px;
+      fill: rgba(255,255,255,0.85);
+      filter: drop-shadow(0 0 12px rgba(0,0,0,0.7));
+    }
+
+    /* Controls bar */
+    .controls {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 10;
+      padding: 10px 14px 12px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.85));
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      opacity: 1;
+      transition: opacity 0.35s;
+    }
+    .video-container:hover .controls { opacity: 1; }
+    .controls.autohide { opacity: 0; }
+
+    /* Progress bar */
+    .progress-wrap {
+      position: relative;
+      height: 4px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    .progress-wrap:hover { height: 6px; }
+    .progress-fill {
+      height: 100%;
+      background: #e53935;
+      border-radius: 2px;
+      width: 0%;
+      pointer-events: none;
+    }
+    .progress-buffer {
+      position: absolute;
+      top: 0; left: 0;
+      height: 100%;
+      background: rgba(255,255,255,0.25);
+      border-radius: 2px;
+      width: 0%;
+      pointer-events: none;
+    }
+
+    /* Buttons row */
+    .btn-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .ctrl-btn {
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 3px;
+      transition: background 0.15s;
+    }
+    .ctrl-btn:hover { background: rgba(255,255,255,0.12); }
+    .ctrl-btn svg { width: 20px; height: 20px; fill: #fff; display: block; }
+
+    .time-label {
+      color: rgba(255,255,255,0.8);
+      font-size: 12px;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+      user-select: none;
+    }
+
+    /* Volume */
+    .vol-wrap { display: flex; align-items: center; gap: 6px; }
+    .vol-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 72px;
+      height: 3px;
+      border-radius: 2px;
+      background: rgba(255,255,255,0.35);
+      outline: none;
+      cursor: pointer;
+    }
+    .vol-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+    }
+    .vol-slider::-moz-range-thumb {
+      width: 11px; height: 11px;
+      border-radius: 50%;
+      background: #fff;
+      border: none;
+      cursor: pointer;
+    }
+
+    .spacer { flex: 1; }
+
+    /* Status badge */
+    .status {
+      position: absolute;
+      top: 12px;
+      left: 14px;
+      z-index: 10;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #fff;
+      background: #e53935;
+      padding: 2px 7px;
+      border-radius: 3px;
+      display: none;
+      font-family: 'Courier New', monospace;
+    }
+    .status.live { display: inline-block; }
+
+    /* Error */
+    .error-msg {
+      display: none;
+      position: absolute;
+      inset: 0;
+      background: #000;
+      color: #aaa;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+      z-index: 20;
+      text-align: center;
+      padding: 20px;
+    }
+    .error-msg.show { display: flex; }
+    .error-msg span { color: #e53935; font-size: 22px; }
+  </style>
+</head>
+<body>
+<div class="player-wrap">
+  <div class="video-container" id="vc">
+
+    <video id="video" playsinline></video>
+
+    <div class="status" id="liveTag">● LIVE</div>
+
+    <div class="error-msg" id="errMsg">
+      <span>⚠</span>
+      No se pudo cargar el stream.<br>Verificá tu conexión o el enlace.
+    </div>
+
+    <!-- Click overlay -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Big play icon -->
+    <div class="big-play" id="bigPlay">
+      <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+    </div>
+
+    <div class="controls" id="controls">
+      <!-- Progress -->
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-buffer" id="bufferBar"></div>
+        <div class="progress-fill" id="progressBar"></div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="btn-row">
+        <!-- Play/Pause -->
+        <button class="ctrl-btn" id="playBtn" title="Play/Pause">
+          <svg id="icPlay" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+          <svg id="icPause" viewBox="0 0 24 24" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        </button>
+
+        <!-- Volume -->
+        <div class="vol-wrap">
+          <button class="ctrl-btn" id="muteBtn" title="Mute">
+            <svg id="icVol" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3A4.5 4.5 0 0 0 14 7.97v8.05c1.48-.73 2.5-2.25 2.5-4.02z"/></svg>
+            <svg id="icMute" viewBox="0 0 24 24" style="display:none"><path d="M16.5 12A4.5 4.5 0 0 0 14 7.97v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.796 8.796 0 0 0 21 12c0-4.28-3-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06A8.99 8.99 0 0 0 17.73 18 L21 21.27 19.73 22l-5-5H3V9l-2-2z"/></svg>
+          </button>
+          <input class="vol-slider" id="volSlider" type="range" min="0" max="1" step="0.02" value="1" />
+        </div>
+
+        <div class="time-label" id="timeLabel">0:00 / 0:00</div>
+
+        <div class="spacer"></div>
+
+        <!-- Fullscreen -->
+        <button class="ctrl-btn" id="fsBtn" title="Pantalla completa">
+          <svg id="icFs" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+          <svg id="icExit" viewBox="0 0 24 24" style="display:none"><path d="M5 16h3v3h2v-5H5v2zm3-8H5v2h5V5H8v3zm6 11h2v-3h3v-2h-5v5zm2-11V5h-2v5h5V8h-3z"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const SRC = 'http://181.119.185.32:8000/play/a00t/index.m3u8?hls';
+
+  const video      = document.getElementById('video');
+  const playBtn    = document.getElementById('playBtn');
+  const icPlay     = document.getElementById('icPlay');
+  const icPause    = document.getElementById('icPause');
+  const muteBtn    = document.getElementById('muteBtn');
+  const icVol      = document.getElementById('icVol');
+  const icMute     = document.getElementById('icMute');
+  const volSlider  = document.getElementById('volSlider');
+  const fsBtn      = document.getElementById('fsBtn');
+  const icFs       = document.getElementById('icFs');
+  const icExit     = document.getElementById('icExit');
+  const progressBar= document.getElementById('progressBar');
+  const bufferBar  = document.getElementById('bufferBar');
+  const progressWrap=document.getElementById('progressWrap');
+  const timeLabel  = document.getElementById('timeLabel');
+  const bigPlay    = document.getElementById('bigPlay');
+  const overlay    = document.getElementById('overlay');
+  const controls   = document.getElementById('controls');
+  const liveTag    = document.getElementById('liveTag');
+  const errMsg     = document.getElementById('errMsg');
+  const vc         = document.getElementById('vc');
+
+  // Init HLS
+  if (Hls.isSupported()) {
+    const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+    hls.loadSource(SRC);
+    hls.attachMedia(video);
+    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+      video.play().catch(() => {});
+    });
+    hls.on(Hls.Events.ERROR, (e, d) => {
+      if (d.fatal) errMsg.classList.add('show');
+    });
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = SRC;
+    video.addEventListener('loadedmetadata', () => video.play().catch(() => {}));
+  } else {
+    errMsg.classList.add('show');
+  }
+
+  // Play / pause
+  function togglePlay() {
+    if (video.paused) video.play(); else video.pause();
+  }
+  overlay.addEventListener('click', togglePlay);
+  playBtn.addEventListener('click', togglePlay);
+
+  video.addEventListener('play', () => {
+    icPlay.style.display  = 'none';
+    icPause.style.display = '';
+    bigPlay.classList.add('hidden');
+  });
+  video.addEventListener('pause', () => {
+    icPlay.style.display  = '';
+    icPause.style.display = 'none';
+    bigPlay.classList.remove('hidden');
+  });
+
+  // Detect live stream
+  video.addEventListener('durationchange', () => {
+    if (!isFinite(video.duration)) liveTag.classList.add('live');
+  });
+
+  // Progress
+  video.addEventListener('timeupdate', () => {
+    if (!isFinite(video.duration)) {
+      progressBar.style.width = '100%';
+      timeLabel.textContent = 'LIVE';
+      return;
+    }
+    const pct = (video.currentTime / video.duration) * 100;
+    progressBar.style.width = pct + '%';
+    timeLabel.textContent = fmt(video.currentTime) + ' / ' + fmt(video.duration);
+  });
+
+  video.addEventListener('progress', () => {
+    if (video.buffered.length && isFinite(video.duration)) {
+      const end = video.buffered.end(video.buffered.length - 1);
+      bufferBar.style.width = ((end / video.duration) * 100) + '%';
+    }
+  });
+
+  progressWrap.addEventListener('click', e => {
+    if (!isFinite(video.duration)) return;
+    const r = progressWrap.getBoundingClientRect();
+    video.currentTime = ((e.clientX - r.left) / r.width) * video.duration;
+  });
+
+  function fmt(s) {
+    s = Math.floor(s);
+    const m = Math.floor(s / 60), sec = s % 60;
+    return m + ':' + String(sec).padStart(2, '0');
+  }
+
+  // Volume
+  volSlider.addEventListener('input', () => {
+    video.volume = +volSlider.value;
+    video.muted = video.volume === 0;
+    syncMuteIcon();
+  });
+  muteBtn.addEventListener('click', () => {
+    video.muted = !video.muted;
+    if (!video.muted) volSlider.value = video.volume || 0.7;
+    syncMuteIcon();
+  });
+  function syncMuteIcon() {
+    const m = video.muted || video.volume === 0;
+    icVol.style.display  = m ? 'none' : '';
+    icMute.style.display = m ? '' : 'none';
+  }
+
+  // Fullscreen
+  fsBtn.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      vc.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen();
+    }
+  });
+  document.addEventListener('fullscreenchange', () => {
+    const full = !!document.fullscreenElement;
+    icFs.style.display  = full ? 'none' : '';
+    icExit.style.display= full ? '' : 'none';
+  });
+
+  // Auto-hide controls
+  let hideTimer;
+  vc.addEventListener('mousemove', () => {
+    controls.classList.remove('autohide');
+    clearTimeout(hideTimer);
+    hideTimer = setTimeout(() => {
+      if (!video.paused) controls.classList.add('autohide');
+    }, 2800);
+  });
+  vc.addEventListener('mouseleave', () => {
+    if (!video.paused) controls.classList.add('autohide');
+  });
+</script>
+</body>
+</html>
