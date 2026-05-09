@@ -233,18 +233,40 @@ const liveBadge= document.getElementById('liveBadge');
 
 // HLS setup
 let isLive = false;
-if (Hls.isSupported()) {
-  const hls = new Hls({ lowLatencyMode: true });
-  hls.loadSource(SRC);
+let hlsInstance = null;
+let tried = 0;
+
+const SOURCES = [
+  SRC,
+  'https://corsproxy.io/?' + encodeURIComponent(SRC),
+  'https://api.allorigins.win/raw?url=' + encodeURIComponent(SRC),
+];
+
+function loadHls(url) {
+  if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+  const hls = new Hls({ lowLatencyMode: true, xhrSetup: xhr => { xhr.withCredentials = false; } });
+  hlsInstance = hls;
+  hls.loadSource(url);
   hls.attachMedia(vid);
   hls.on(Hls.Events.MANIFEST_PARSED, () => {
-    isLive = hls.levels.length > 0 && vid.duration === Infinity;
+    isLive = vid.duration === Infinity;
     if (isLive) liveBadge.classList.add('show');
     vid.play().catch(()=>{});
   });
   hls.on(Hls.Events.ERROR, (_, d) => {
-    if (d.fatal) showError('Error fatal HLS: ' + d.type);
+    if (d.fatal) {
+      tried++;
+      if (tried < SOURCES.length) {
+        loadHls(SOURCES[tried]);
+      } else {
+        showError('No se pudo conectar al stream. Puede estar caído o bloqueado por CORS.');
+      }
+    }
   });
+}
+
+if (Hls.isSupported()) {
+  loadHls(SOURCES[tried]);
 } else if (vid.canPlayType('application/vnd.apple.mpegurl')) {
   vid.src = SRC;
   vid.addEventListener('loadedmetadata', () => vid.play());
